@@ -1,0 +1,498 @@
+%
+\documentclass[a4paper]{article}
+\usepackage[OT1]{fontenc}
+\usepackage{Sweave}
+\usepackage[colorlinks=true, pdfborder={0 0 0}]{hyperref}
+
+\parindent 0pt
+\parskip 12pt
+
+\newcommand{\rncbi}[1]{\textbf{\textit{RNCBI}}}
+\newcommand{\ncbi}[1]{NCBI webservice}
+%\SweaveOpts{keep.source=TRUE}
+
+\title{RNCBI Manual}
+\author{Martin Schumann}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+<<echo=FALSE, results=hide>>=
+options(width = 70)
+@
+
+\section{Introduction}
+This document will describe some examples, which use the \rncbi{} package (0.9). Please visit the \href{https://code.google.com/p/rncbi/}{project page} for information, discussions etc.
+
+If you would like to learn more about the java part of the package, please take a look at the JavaDoc or the source code. To make a long story short, 
+the java part uses the Axis2 libraries from the apache project \url{http://ws.apache.org/axis2/} to send requests to the \ncbi{} and to retrieve the results respectively.
+
+It is important to mention, that this package was built using the \textbf{S4} class system to provide object-oriented programming.
+This means that mostly every function called will return a modified object of the one that was provided as argument, because the arguments are passed by value.
+The examples below will highlight this fact.
+
+\section{Installation}
+The following packages are required to install \rncbi{}:
+\begin{description}
+\item[rJava 0.8-3] This library provides the access to the java part of this package. See \url{http://www.rforge.net/rJava/} for installation files and infos.
+\item[XML 2.8-1] The XML library for R. See \url{http://cran.r-project.org/web/packages/XML/index.html} for installation files and infos. This package requires the \textbf{libxml2 development} libraries.
+\end{description}
+
+\section{Usage}
+\label{usage}
+The very first step is to initialize the interface to the java part. In this step one can provide extra information to the interface, like a proxy server or whether to debug or not.
+In case of the EFetch operations for each database, the results will contain a lot of empty entries. By default these entries will be removed, but this can be disabled by providing
+\texttt{tidy=FALSE} as arguments.
+<<initncbi>>=
+library(RNCBI)
+ncbi <- NCBI()
+@
+\label{init:ncbi}
+If you have set the proxy settings in your R environment, then this call to the \texttt{NCBI()} function is sufficient. The program will use the \texttt{Sys.getenv("http\_proxy")} to 
+get your settings. If there are any problems with that or you additionally have to provide user and password to your proxy, then these settings can be set manually.
+<<initncbiwithproxy, eval=FALSE>>=
+library(RNCBI)
+ncbi <- NCBI(proxy="http://host:port", debug=FALSE, tidy=TRUE)
+setProxyUser(user="user", password="password")
+@
+This will set the proxy to "http://host:port", debug to \texttt{false} and tidy to \texttt{true}. Which means, that the program should use the given proxy, 
+it should not debug and it should remove empty entries. With the last step the user and the password for the proxy will be set. The password can be left empty, if no password is required.
+
+All these steps have to be done to use the \ncbi{}. After this each operation of the webservice can be run.
+The package provides some useful functions to get an overview of the available operations of the \ncbi{}. Because each operation from the webservice expects different parameter, 
+another function to get a list with these parameter exists. All these functions expect the \texttt{ncbi} object as first argument, because this contains the information to connect 
+to the java interface.
+<<helpers>>=
+getOperations(ncbi, printNames=FALSE)
+getEFetchDatabases(ncbi)
+getRequestParameter(ncbi, "egquery")
+@
+\begin{itemize}
+\item The \texttt{getOperations} function will return the names of the \textbf{EUtils} operations by default. If provided with the parameter \texttt{printNames=FALSE} a vector will be returned.
+\item The \texttt{getEFetchDatabases} function will return the names of the \textbf{EFetch} databases which are available by default. It will also return a vector, 
+if \texttt{printNames=FALSE} is given as argument.
+\item The \texttt{getRequestParameter} function will return the names of the parameter, which have to be set, to send a request to the \ncbi{}.
+The second argument is the name of the operation, for which the request parameter should be returned. 
+\end{itemize}
+
+\subsection{EUtils operations}
+After the initialization step, the operations can be called.
+In case of the \textbf{EUtils} the user has to create a new object for each operation.
+<<initegquery>>=
+egquery <- EGQuery(ncbi)
+@
+With this \texttt{egquery} object the user now can set the request parameter. 
+There are two ways to do this:
+\begin{enumerate}
+\item With the help of the \texttt{setRequestParameter} function. This takes the initiated object of the webservice operation, the parameter name to set and the value for the parameter.
+\item Get the list of request parameter from the operation object and set the parameter manually.
+\end{enumerate}
+<<egquery>>=
+str(egquery@request)
+egquery <- setRequestParameter(egquery, "term", "mouse")
+egquery@request$term <- "mouse"
+str(egquery@request)
+@
+\label{setrequest}
+The \texttt{str} function is only used to make the output a little bit more consolidated.
+After setting the request parameter, the request can be sent to the \ncbi{}.
+To do this, every operation has a request method like \texttt{requestEGQuery}, which takes the operation object as argument and returns this object with the results from the webservice.
+<<requestegquery>>=
+egquery <- requestEGQuery(egquery)
+@
+If this doesn't produce any errors or warnings, then the results are in the results list of the operation object. This list can be accessed directly through the operation object or
+it can be get using the \texttt{getResults} method, which takes an operation object as argument and returns its results list. 
+<<egqueryresults>>=
+results <- egquery@results
+results <- getResults(egquery)
+names(results)
+@
+The results list is in most cases a very complex list of lists. To get an overview of the returned parameters and their values, the \texttt{str} function is very helpfully tool.
+<<overview, eval=FALSE>>=
+str(results)
+@
+In this case it is a long list of resultitems, which contains information about the appearance of the term "mouse" in every database of the \ncbi{}.
+<<inspectingresults>>=
+str(results$resultitem$resultitem[[1]])
+@
+The first "resultitem" indicates the parameter name in the result from the \ncbi{}. The second indicates, that this is an array of items of the type "resultitem". 
+Each item in the array is a "resultitem", which in turn consists of four further parameter "count", "status", "menu" and "dbname".
+To search through this I would suggest a simple for loop over the elements of the "resultitem" array.
+<<loop>>=
+for(i in 1:length(results$resultitem$resultitem)) {
+	tmp <- results$resultitem$resultitem[[i]]
+	if (tmp$count < 15) {
+		print(tmp$dbname)
+	}
+}
+@
+This example loop shows the database names, that contains the search term less than 15 times. You can modify this loop to get other results.
+Another possibilty is to convert the "resultitem" array into a dataframe, which provides better access to each element.
+<<converttodf>>=
+x <- do.call(rbind, lapply(results$resultitem$resultitem, unlist))
+resultitem <- data.frame(x,stringsAsFactors=FALSE, row.names=NULL)
+head(resultitem)
+@
+The dataframe now contains the information from all the resultitems.
+<<checkterm>>=
+resultitem[resultitem$status!="Ok",]
+@
+This example checks whether the term or a database was not found.
+%Or you can use this \href{http://stackoverflow.com/questions/2874667/how-to-access-elements-in-a-complex-list/2876845#2876845}{solution} to convert the list to a dataframe, 
+%but this will only be possible, if the columns are of equal length in the resulting dataframe. 
+
+\subsection{EFetch operations}
+As there are distinct services for the EFetch operation depending on the database, the initialization step is a little bit different from the EUtils.
+To get any information about the EFetch operation, the operation object has to be initiated.
+<<efetcherror>>=
+efetch <- EFetch(ncbi, "pubmed")
+str(getRequestParameter(ncbi,"efetch"))
+@
+The "ncbi" object is the same we initiated before (see \ref{init:ncbi}). If you call the \texttt{getRequestParameter} function before initiating the EFetch object,
+then this will return an error with the description, that an EFetch database has to be set first.
+After the EFetch object was initiated, the request parameter are availabe and can be set like before (see \ref{setrequest}).
+<<efetchrequest>>=
+efetch <- setRequestParameter(efetch, "id", c(12091962, 9997))
+efetch <- requestEFetch(efetch)
+results <- getResults(efetch)
+@
+Every EFetch operation can take mulltiple IDs as arguments. The \ncbi{} handles multiple IDs in most cases as a simple string, that contains the IDs separated by comma.
+But the EUtils operation "ELink" expects an array of IDs in the request. Because of this difference, multiple IDs have to be provided as vector to the interface.
+The java part will take care whether to generate an array or a simple string.
+
+The results of this EFetch request will be a very complex list, but you can again use the \texttt{str} function to get an overview of the content.
+
+\subsection{Further possibilties}
+This package should give the user the opportunity to use the results at their own will as much as possible. Furthermore the results are very dynamic, 
+because they will come from a webservice. Which means that the result depends on the query.
+To realize this, all the results are returned as a list. Because lists are the most flexible data structure in R. Furthermore it is possible to retrieve the xml document, which was passed
+from the java interface to R, but only for the EFetch operations. 
+<<xmldoc>>=
+xml <- efetch@xmldoc
+@
+The xml document is located in the "xmldoc" slot of the EFetch operation object. It is an XMLNodeList and can be parsed like any other xml document. The structure is very simple and only
+indicates arrays and objects. An array is a collection of the some objects. And an object contains either another object or an entry. All the xml tags hold a name attribute
+and the array tags additionally holds a length attribute.
+
+
+\section{Examples from the NCBI website}
+The following examples are taken from the ncbi website \href{http://www.ncbi.nlm.nih.gov/entrez/eutils/soap/v2.0/DOC/esoap_java_help.html#examples}{Examples}.
+For further information about each operation please take a look at Chapter 4 of this \href{http://www.ncbi.nlm.nih.gov/bookshelf/br.fcgi?book=helpeutils&part=chapter4}{book}.
+
+The ncbi object, which was created at the beginning (see \ref{init:ncbi} is still required at this point.
+The object only has to be created once in a session and can be used to call all operations from the \ncbi{}.
+
+\subsection{Call EGQuery}
+As seen in the Usage section (see \ref{usage}).
+
+\subsection{Call EInfo}
+This example simply calls the EInfo operation with no parameters to get a list of database names, but first we have to create an \texttt{einfo} object.
+<<einfo>>=
+einfo <- EInfo(ncbi)
+einfo <- requestEInfo(einfo)
+str(getResults(einfo))
+@
+The \texttt{einfo} object now can be used to set a database name to the request slot and do a new request to the webservice. The operation object can be reused for this second task, 
+becauses there were no request parameter set.
+<<einfodb>>==
+einfo <- setRequestParameter(einfo, "db", "pubmed")
+einfo <- requestEInfo(einfo)
+results <- getResults(einfo)
+names(results)
+@
+The results provide the statistics for the "pubmed" database, including a lists of indexing fields ("fieldlist") and available link names ("linklist").
+These results can be inspected more by converting the "linklist" and the "fieldlist" into a data frame.
+<<echo=FALSE, results=hide>>=
+options(width=80)
+@
+<<createDF>>=
+results$description
+results$lastupdate
+results$dbname
+results$menuname
+x <- do.call(cbind, lapply(results$linklist, unlist))
+linklist <- data.frame(x, stringsAsFactors=FALSE)
+linklist[linklist$dbto=="gene",2:4]
+x <- do.call(cbind, lapply(results$fieldlist, unlist))
+fieldlist <- data.frame(x, stringsAsFactors=FALSE)
+head(fieldlist[1:5,c(3,4,7,8)])
+@
+<<echo=FALSE, results=hide>>=
+options(width=70)
+@
+The output is reduced, as you can see. These are all the entries, which link to the gene database and the first six entries from the "fieldlist".
+
+\subsection{Call ELink}
+This example retrieves IDs from Nucleotide for GI 48819, 7140345 to Protein. First create an \texttt{elink} object and set the request parameter.
+<<elink, keep.source=FALSE>>=
+elink <- ELink(ncbi)
+elink <- setRequestParameter(elink, "db", "protein")
+elink <- setRequestParameter(elink, "dbfrom", "nuccore")
+elink <- setRequestParameter(elink, "id", c(48819, 7140345))
+elink <- requestELink(elink)
+results <- getResults(elink)
+names(results$linkset$linkset[1]$linkset)
+@
+After setting the request parameter and sending the request to the webservice, the results can be stored. The results contain all elements the \ncbi{} provides, even if the 
+element is not set. In this case, the element contains "empty".
+Again the result contains an array of two "linkset" items, as we asked for two IDs. Each of these "linkset" items contain the further subelements for each ID.
+Altough there are two "linkset" items, only the second item contains the two "linksetdb" items, we are looking for. These two "linksetdb" items contain a list of IDs and they can be 
+retrieved with the following steps.
+<<retrievelinksetdb>>=
+lset <- results$linkset$linkset[2]$linkset
+firstLSetDb <- lset$linksetdb[1]$linksetdb
+secondLSetDb <- lset$linksetdb[2]$linksetdb
+x <- do.call(rbind, lapply(firstLSetDb$link, unlist))
+firstLink <- data.frame(x,stringsAsFactors=FALSE, row.names=NULL)
+firstLSetDb$linkname
+head(firstLink)
+x <- do.call(rbind, lapply(secondLSetDb$link, unlist))
+secondLink <- data.frame(x, stringsAsFactors=FALSE, row.names=NULL)
+secondLSetDb$linkname
+head(secondLink)
+@
+These are the IDs we were looking for.
+The results of this operation depends heavily on the request sent. For all the other tasks, the ELink operation can be used, please take a look at the results with the \texttt{str}
+function first to get an overview. 
+
+\subsection{Call EPost}
+This operation puts a list of IDs to the history for later use.
+<<epost>>=
+epost <- EPost(ncbi)
+epost <- setRequestParameter(epost, "db", "pubmed")
+epost <- setRequestParameter(epost, "id", c(123, 456, 37281, 983621))
+epost <- requestEPost(epost)
+epostResults <- getResults(epost)
+epostResults$webenv
+epostResults$querykey
+@
+This "webenv" and "querykey" can be used to request information from the ELink operation for example.
+<<elinkwithepost>>=
+elink <- ELink(ncbi)
+elink <- setRequestParameter(elink, "query_key", epostResults$querykey)
+elink <- setRequestParameter(elink, "webenv", epostResults$webenv)
+elink <- requestELink(elink)
+elinkResults <- getResults(elink)
+@
+We have to create a new \texttt{elink} object, because the old request parameter are still there.
+This result has the correct structure and beside the fact that it contains about 400 IDs, it can be converted into a dataframe like this:
+<<elinkwithwebenv, keep.source=TRUE>>=
+linkset <- elinkResults$linkset$linkset$linkset
+linksetdb <- linkset$linksetdb$linksetdb
+length(linksetdb$link)
+x <- do.call(rbind, lapply(linksetdb$link, unlist))
+link <- data.frame(x,stringsAsFactors=FALSE, row.names=NULL)
+head(link)
+@
+
+\subsection{Call ESearch}
+\label{call:esearch}
+This examples searches in the PubMed Central database for stem cells in free fulltext articles.
+<<esearch, keep.source=TRUE>>=
+esearch <- ESearch(ncbi)
+esearch <- setRequestParameter(esearch, "db", "pmc")
+esearch <- setRequestParameter(esearch, "term",	
+		"stem+cells+AND+free+fulltext[filter]")
+esearch <- setRequestParameter(esearch, "retmax", 15)
+esearch <- requestESearch(esearch)
+results <- getResults(esearch)
+results$count
+x <- do.call(cbind, lapply(results$idlist, unlist))
+ids <- data.frame(x, stringsAsFactors=FALSE, row.names=NULL)
+head(ids)
+@
+Again we convert the "idlist" into a dataframe for better access.
+The results list contains several more information about the "term" that was sent to the webservice. Detailed informations about this 
+can be found in the "\texttt{results\$translationstack}" sublist.
+
+\subsection{Call ESpell}
+This example retrieves spelling suggestions.
+<<espell>>=
+espell <- ESpell(ncbi)
+espell <- setRequestParameter(espell, "db", "pubmed")
+espell <- setRequestParameter(espell, "term", "mouss")
+espell <- requestESpell(espell)
+results <- getResults(espell)
+results$query
+results$correctedquery
+@
+
+\subsection{Call ESummary}
+This example retrieves document summaries by a list of primary IDs.
+<<esummary>>=
+esummary <- ESummary(ncbi)
+esummary <- setRequestParameter(esummary, "db", "nucleotide")
+esummary <- setRequestParameter(esummary, "id", c(28864546, 28800981))
+esummary <- requestESummary(esummary)
+results <- getResults(esummary)
+@
+The results contains two "docsums" and each of them contains a list of "items".
+This result can be converted to a dataframe again.
+<<esummaryinspect>>=
+firstDocSum <- results$docsum$docsum[1]$docsum
+x <- do.call(rbind, lapply(firstDocSum$item, unlist))
+items <- data.frame(x, stringsAsFactors=FALSE, row.names=NULL)
+firstDocSum$id
+items[c(1,3:5),]
+@
+This shows only a selected part of the result.
+The second "docsum" can be retrieved the same way.
+
+\subsection{Call EFetch}
+This example fetches a record from the taxonomy database. The EFetch operation is a little bit different from the other EUtils operations.
+<<efetch>>=
+getEFetchDatabases(ncbi)
+efetch <- EFetch(ncbi, "taxon")
+getRequestParameter(ncbi, "efetch")
+@
+First we have to find the name for the database. The taxonomy database is available as "taxon" in the interface. So we initiate the \texttt{efetch} object with the database name.
+Now we are able to get the request parameter, if necessary. After that we can set the request parameter.
+<<efetchrequest>>=
+efetch <- setRequestParameter(efetch, "id", c(9685, 522328))
+efetch <- requestEFetch(efetch)
+results <- getResults(efetch)
+@
+After setting the request parameter, we make a request to the \ncbi{}.
+The results contains a "taxaset", which in turn contains two "taxon" elements. We only want to inspect the first "taxon" item a little more.
+<<taxoninspect>>=
+firstTaxon <- results$taxaset$taxaset$taxon[1]$taxon
+@
+First we create a dataframe for the "othernames" items.
+<<taxonothernames>>=
+x <- do.call(rbind, lapply(firstTaxon$othernames$othernamestypechoice_type0, unlist))
+othernames <- data.frame(x, stringsAsFactors=FALSE, row.names=NULL)
+othernames
+firstTaxon$othernames$genbankcommonname
+firstTaxon$scientificname
+@
+We use the some method like many times before to create the dataframe.
+Now it is time to get a list of the "lineageex". Again we create a dataframe for this.
+<<efetchlineage>>=
+lineage <- firstTaxon$lineageex$taxon
+x <- do.call(rbind, lapply(lineage, unlist))
+lin <- data.frame(x, stringsAsFactors=FALSE, row.names=NULL)
+head(lin)
+@
+The second "taxon" item can be handled the same way. For further information take a look at the names of each taxon.
+<<namesoftaxon>>=
+names(firstTaxon)
+@
+
+\subsection{Search, Link \& Fetch example}
+This is an example which uses 3 operations from the \ncbi{} to get a result.
+The first step is to search in the PubMed database for "cat".
+<<slffirststep>>=
+esearch <- ESearch(ncbi)
+esearch <- setRequestParameter(esearch, "db", "pubmed")
+esearch <- setRequestParameter(esearch, "term", "cat+AND+pubmed_nuccore[sb]")
+esearch <- setRequestParameter(esearch, "sort", "PublicationDate")
+esearch <- setRequestParameter(esearch, "retmax", 5)
+esearch <- requestESearch(esearch)
+esearchRes <- esearch@results
+x <- do.call(cbind, lapply(esearchRes$idlist, unlist))
+idlist <- data.frame(x, stringsAsFactors=FALSE, row.names=NULL)
+idlist
+esearchRes$count
+@
+Like before (see \ref{call:esearch}), we create a dataframe from the "idlist".
+Now we can proceed to the second step. The second step retrieves links from the nucleotide database for the IDs we previously fetched.
+<<slfsecstep>>=
+elink <- ELink(ncbi)
+elink <- setRequestParameter(elink, "db", "nuccore")
+elink <- setRequestParameter(elink, "dbfrom", "pubmed")
+elink <- setRequestParameter(elink, "id", idlist$id)
+elink <- requestELink(elink)
+elinkRes <- getResults(elink)
+linksetAr <- elinkRes$linkset$linkset
+@
+As all the operations accept a vector for the IDs, we simply pass the "id" column from the "idlist".
+Now we have to get the UIDs from the result. This can be done with a simple for loop.
+<<slfelinkres>>=
+UIDVec <- NULL
+for (i in 1:length(linksetAr)) {
+	lsetdb <- linksetAr[i]$linkset$linksetdb$linksetdb
+	idAr <- lsetdb$link
+	x <- do.call(rbind, lapply(idAr, unlist))
+	UIDList <- data.frame(x,stringsAsFactors=FALSE, row.names=NULL)
+	UIDVec <- c(UIDVec, UIDList$id)
+}
+@
+In the loop every first element of the "linksetdb" item from each "linkset" is used, like in the example.
+Now we got a vector with the UIDs. With this we proceed to the third step and fetch the records from the nuccore database.
+As we know from the NCBI website, the nuccore database is contained in the sequence database, so we select this one and set the nuccore database as request parameter.
+<<slfthirdstep>>=
+getEFetchDatabases(ncbi)
+efetch <- EFetch(ncbi, "sequence")
+getRequestParameter(ncbi, "efetch")
+efetch <- setRequestParameter(efetch, "db", "nuccore")
+efetch <- setRequestParameter(efetch, "id", UIDVec)
+efetch <- requestEFetch(efetch)
+efetchRes <- getResults(efetch)
+gbset <- efetchRes$gbset$gbset
+gbsetsequence <- gbset$gbsetsequence
+org <- NULL
+loc <- NULL
+def <- NULL
+for (i in 1:length(gbsetsequence)) {
+	gbseq <- gbsetsequence[i]$gbsetsequence$gbseq
+	org <- c(org, gbseq$gbseq_organism)
+	loc <- c(loc, gbseq$gbseq_locus)
+	def <- c(def, gbseq$gbseq_definition)
+}
+resultDF <- data.frame(org, loc, def, stringsAsFactors=FALSE, row.names=NULL)
+head(resultDF[,1:2])
+@
+I would suggest to not print the efetchRes object. Instead we proceed with it.
+We simply loop over "gbseq" and append each entry to the corresponding vector. After that, we put those vectors into a dataframe.
+The output only shows the first two columns, as the third won't fit on the page.
+Certainly there are more efficient ways to retrieve the data.
+
+\subsection{Using WebEnv \& QueryKey example}
+This example uses WebEnv and QueryKey to retrieve information from the EFetch Pubmed database.
+First we search for "cat" with the ESearch operation.
+<<firststepwebenv>>=
+esearch <- ESearch(ncbi)
+esearch <- setRequestParameter(esearch, "db", "pubmed")
+esearch <- setRequestParameter(esearch, "term", "cat")
+esearch <- setRequestParameter(esearch, "sort", "PublicationDate")
+esearch <- setRequestParameter(esearch, "usehistory", "y")
+esearch <- requestESearch(esearch)
+esearchRes <- getResults(esearch)
+webenv <- esearchRes$webenv
+querykey <- esearchRes$querykey
+@
+Now as we have the wanted information, we proceed to the second step and use the "webenv" and "querykey" to fetch five records from the EFetch Pubmed database starting with record ten.
+<<secstepwebenv>>=
+efetch <- EFetch(ncbi, "pubmed")
+getRequestParameter(ncbi, "efetch")
+efetch <- setRequestParameter(efetch, "webenv", webenv)
+efetch <- setRequestParameter(efetch, "query_key", querykey)
+efetch <- setRequestParameter(efetch, "retstart", 10)
+efetch <- setRequestParameter(efetch, "retmax", 5)
+efetch <- requestEFetch(efetch)
+efetchRes <- getResults(efetch)
+@
+This result now can be inspected further. We use the same method as before and write a loop, put the information into a vector and create a dataframe out of these vectors.
+<<inspectwebenv>>=
+pubmedArticleAr <- efetchRes$pubmedarticleset$pubmedarticleset$pubmedarticle
+pmid <- NULL
+title <- NULL
+abstract <- NULL
+for (i in 1:length(pubmedArticleAr)) {
+	medLCit <- pubmedArticleAr[i]$pubmedarticle$medlinecitation
+	pmid <- c(pmid, medLCit$pmid)
+	title <- c(title, medLCit$article$articletitle)
+	abstract <- c(abstract, medLCit$article$abstract$abstracttext)
+}
+resultDF <- data.frame(pmid, title, abstract, stringsAsFactors=FALSE, row.names=NULL)
+resultDF[,1]
+@
+The columns "title" and "abstract" of the dataframe are way to long to print them here, so feel free to reproduce this example.
+
+\end{document}
+
+
+
+
