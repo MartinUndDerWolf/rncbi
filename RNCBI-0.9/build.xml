@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project name="RNCBI" basedir="." default="main">
+	<property name="rinterface.name" value="RInterface" />
+	<property name="rinterface.build.dir" value="build_RInterface" />
+	<property name="rinterface.src.dir" value="src/de" />
+	<property name="rinterface.jar.dir" value="${rinterface.build.dir}/jar" />
+	<property name="rinterface.classes.dir" value="${rinterface.build.dir}/classes" />
+	<property name="lib.dir" value="R-Source/inst/java" />
+	<property name="junit.lib.dir" value="junit-libs" />
+	<property name="ncbistub.name" value="NCBIStub" />
+	<property name="ncbistub.build.dir" value="build_NCBIStub" />
+	<property name="ncbistub.src.dir" value="src/gov" />
+	<property name="ncbistub.jar.dir" value="${ncbistub.build.dir}/jar" />
+	<property name="ncbistub.classes.dir" value="${ncbistub.build.dir}/classes" />
+	<property name="tmp.dir" value="tmpDir" />
+	<property name="report.dir" value="${rinterface.build.dir}/junitreport" />
+	<property name="test.class" value="de.hzi.infg.test.InvocationTest" />
+
+	<path id="rinterface.classpath">
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+			<exclude name="**/RInterface.jar" />
+			<exclude name="**/NCBIStub.jar" />
+		</fileset>
+		<fileset dir="${ncbistub.jar.dir}" includes="**/*.jar" />
+		<fileset dir="${junit.lib.dir}" includes="**/*.jar" />
+	</path>
+
+	<path id="ncbistub.classpath">
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+			<exclude name="**/RInterface.jar" />
+			<exclude name="**/NCBIStub.jar" />
+		</fileset>
+		<pathelement location="${tmp.dir}" />
+	</path>
+
+	<target name="clean">
+		<delete dir="${rinterface.build.dir}" />
+		<delete dir="${ncbistub.build.dir}" />
+	</target>
+	<!-- necessary to compile the NCBIStub.jar, which in turn is necessary for the RInterface.jar -->
+	<target name="ncbistub.pre.compile">
+		<mkdir dir="${tmp.dir}" />
+		<javac srcdir="${rinterface.src.dir}" destdir="${tmp.dir}">
+			<include name="**/interfaces/TypeInterface*" />
+			<include name="**/exceptions/**" />
+		</javac>
+	</target>
+
+	<target name="rinterface.compile" depends="ncbistub.compile">
+		<mkdir dir="${rinterface.classes.dir}" />
+		<javac srcdir="${rinterface.src.dir}" destdir="${rinterface.classes.dir}" classpathref="rinterface.classpath" />
+	</target>
+
+	<target name="ncbistub.compile" depends="ncbistub.pre.compile">
+		<mkdir dir="${ncbistub.classes.dir}" />
+		<javac srcdir="${ncbistub.src.dir}" destdir="${ncbistub.classes.dir}" classpathref="ncbistub.classpath" />
+		<delete dir="${tmp.dir}" />
+	</target>
+
+	<target name="ncbistub.jar" depends="ncbistub.compile">
+		<mkdir dir="${rinterface.jar.dir}" />
+		<mkdir dir="${ncbistub.jar.dir}" />
+		<jar destfile="${ncbistub.jar.dir}/${ncbistub.name}.jar" basedir="${ncbistub.classes.dir}">
+		</jar>
+	</target>
+
+	<target name="rinterface.jar" depends="rinterface.compile">
+		<mkdir dir="${rinterface.jar.dir}" />
+		<jar destfile="${rinterface.jar.dir}/${rinterface.name}.jar" basedir="${rinterface.classes.dir}">
+		</jar>
+	</target>
+
+	<path id="application">
+		<pathelement location="${rinterface.jar.dir}/${rinterface.name}.jar" />
+	</path>
+
+	<target name="junit" depends="rinterface.jar">
+		<mkdir dir="${report.dir}" />
+		<junit printsummary="yes">
+			<classpath>
+				<path refid="rinterface.classpath" />
+				<path refid="application" />
+			</classpath>
+			<formatter type="xml" />
+			<test name="${test.class}" todir="${report.dir}" />
+		</junit>
+	</target>
+	<target name="junitreport">
+		<junitreport todir="${report.dir}">
+			<fileset dir="${report.dir}" includes="TEST-*.xml" />
+			<report todir="${report.dir}" />
+		</junitreport>
+	</target>
+
+	<target name="main" depends="clean,ncbistub.jar,rinterface.jar" />
+	<target name="withjunit" depends="clean,ncbistub.jar,rinterface.jar,junit" />
+
+</project>
