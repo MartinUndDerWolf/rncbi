@@ -12,6 +12,7 @@
 	<property name="ncbistub.src.dir" value="src/gov" />
 	<property name="ncbistub.jar.dir" value="${ncbistub.build.dir}/jar" />
 	<property name="ncbistub.classes.dir" value="${ncbistub.build.dir}/classes" />
+	<property name="efetch.lib.dir" value="EFetch" />
 	<property name="tmp.dir" value="tmpDir" />
 	<property name="report.dir" value="${rinterface.build.dir}/junitreport" />
 	<property name="test.class" value="de.hzi.infg.test.InvocationTest" />
@@ -24,6 +25,7 @@
 		</fileset>
 		<fileset dir="${ncbistub.jar.dir}" includes="**/*.jar" />
 		<fileset dir="${junit.lib.dir}" includes="**/*.jar" />
+		<fileset dir="${efetch.lib.dir}" includes="**/*.jar" excludes="**/*_src.jar" />
 	</path>
 
 	<path id="ncbistub.classpath">
