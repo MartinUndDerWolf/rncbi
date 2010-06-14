@@ -1,3 +1,3 @@
-* [Installation Installation]
-* [CompileProject Compile the Source from svn]
-* [Examples Some Examples]
+* [Installation.wiki Installation]
+* [CompileProject.wiki Compile the Source from svn]
+* [Examples.wiki Some Examples]
