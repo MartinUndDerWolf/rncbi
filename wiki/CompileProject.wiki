@@ -1,1 +1,89 @@
 #summary Compile the source from svn.
+
+= Checkout = 
+To check out the project see the [https://code.google.com/p/rncbi/source/checkout source section] of the project.
+
+
+= Preparation =
+To compile the source files of the java part, it is necessary to get some libraries and include them into the build path.
+This is simply done by downloading them and copying to the right destination.
+	# First download the Axis2 libraries from [https://code.google.com/p/rncbi/source/checkout Apache Axis2] site.
+	# The *Standard Binary Distribution* is sufficient for our needs. Save it somewhere and extract it.
+	# Inside the just created Axis2 directory exists a *lib* directory. The content of this directory needs to be copied to 
+	the _R-Source/inst/java_ directory of the svn checkout. See the [CompileProject#Optimization Optimization] for some optimization.
+	# After that we also need the JUnit library from [http://www.junit.org/ JUnit Home]. 
+	# Save the JUnit jar file in the _junit-libs_ directory.
+	# Be sure to have the *EFetch* jar files contained in the EFetch directory.
+
+
+= Compilation =
+For each version of the RNCBI package a separate directory inside the "trunk" directory exists.
+Each directory contains a _build.xml_ and a _javadoc.xml_.
+The _build.xml_ is a ant task file, which can be run by calling ant inside the directory of the build file.<br>
+Or call ant with the build file as argument 
+{{{
+ant -buildfile build.xml
+}}}
+This creates an _RInterface.jar_ file, which is necessary for the R package.
+
+In addition to the normal compilation, a junit test can be invoked by calling the target "withjunit" of the build file 
+{{{
+ant -buildfile build.xml withjunit
+}}}
+But be careful, as this might take a while.<br/>After the junit test has been completed successfully a report can be found in the _build_RInterface_ directory.
+
+The last step is to copy the created jar files (NCBIStub.jar and RInterface.jar) and all jars from the EFetch directory into the _R-Source/inst/java_ directory.
+
+= Create the R Package =
+To create the R package the development tools are required. On unix systems these tools are included in the standard R installation, for other operating systems see your preferred web search engine.
+The directory structure of the svn checkout is already the one we need to create an R package. So we simply do:
+{{{
+R CMD check R-Source/
+R CMD build R-Source/
+}}}
+The last step creates a tar.gz file which contains the package.
+This file can be installed with the 
+{{{
+R CMD INSTALL RNCBI_x.y.tar.gz
+}}}
+command.
+<p>
+
+= Optimization =
+As not all libraries from the Apache Axis2 framework are required to communicate with the webservice, <br>we can remove some of them from the _R-Source/inst/java_ directory.
+  * activation-1.1.jar
+  * axiom-dom-1.2.8.jar
+  * axis2-adb-codegen-1.5.1.jar
+  * axis2-ant-plugin-1.5.1.jar
+  * axis2-clustering-1.5.1.jar
+  * axis2-codegen-1.5.1.jar
+  * axis2-corba-1.5.1.jar
+  * axis2-fastinfoset-1.5.1.jar
+  * axis2-java2wsdl-1.5.1.jar
+  * axis2-jaxbri-1.5.1.jar
+  * axis2-jaxws-1.5.1.jar
+  * axis2-jibx-1.5.1.jar
+  * axis2-json-1.5.1.jar
+  * axis2-metadata-1.5.1.jar
+  * axis2-mtompolicy-1.5.1.jar
+  * axis2-saaj-1.5.1.jar
+  * axis2-spring-1.5.1.jar
+  * axis2-xmlbeans-1.5.1.jar
+  * bcel-5.1.jar
+  * commons-fileupload-1.2.jar
+  * geronimo-`*`.jar
+  * jalopy-1.5rc3.jar
+  * jaxb-`*`.jar
+  * jaxen-1.1.1.jar
+  * jettison-1.0.RC2.jar
+  * jibx-`*`.jar
+  * mex-1.5.1.jar
+  * smack`*`.jar
+  * soapmonitor-1.5.1.jar
+  * woden-api-1.0M8.jar
+  * woden-impl-dom-1.0M8.jar
+  * wstxl-asl-3.2.4.jar
+  * xalan-2.7.0.jar
+  * xercesImpl-2.6.2.jar
+  
+`*` means every character possible. 
