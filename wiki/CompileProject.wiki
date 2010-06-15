@@ -9,8 +9,7 @@ To compile the source files of the java part, it is necessary to get some librar
 This is simply done by downloading them and copying to the right destination.
 	# First download the Axis2 libraries from [http://ws.apache.org/axis2/ Apache Axis2] site.
 	# The *Standard Binary Distribution* is sufficient for our needs. Save it somewhere and extract it.
-	# Inside the just created Axis2 directory exists a *lib* directory. The content of this directory needs to be copied to 
-	the _R-Source/inst/java_ directory of the svn checkout. See the [CompileProject#Optimization Optimization] for some optimization.
+	# Inside the just created Axis2 directory exists a *lib* directory. The content of this directory needs to be copied to the _R-Source/inst/java_ directory of the svn checkout. See the [CompileProject#Optimization Optimization] for some optimization.
 	# After that we also need the JUnit library from [http://www.junit.org/ JUnit Home]. 
 	# Save the JUnit jar file in the _junit-libs_ directory.
 	# Be sure to have the *EFetch* jar files contained in the EFetch directory.
