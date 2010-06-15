@@ -1,6 +1,10 @@
 #summary Short description how to install this package.
 #labels Featured,Phase-Requirements
 
+= Introduction =
+With this package it is possible to access data from the NCBI Webservice inside R and use this data for further processing.
+The package provides the returned data in the form of a list object. This list can be inspected further, see the [Examples Examples] for more details.
+
 = Installation =
 Installation of the package is quite easy as it doesn't need to compile anything.
 The only precondition is to provide [http://www.java.com/ Java 5] or higher.<br>
