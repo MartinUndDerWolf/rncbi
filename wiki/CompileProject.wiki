@@ -7,7 +7,7 @@ To check out the project see the [https://code.google.com/p/rncbi/source/checkou
 = Preparation =
 To compile the source files of the java part, it is necessary to get some libraries and include them into the build path.
 This is simply done by downloading them and copying to the right destination.
-	# First download the Axis2 libraries from [https://code.google.com/p/rncbi/source/checkout Apache Axis2] site.
+	# First download the Axis2 libraries from [http://ws.apache.org/axis2/ Apache Axis2] site.
 	# The *Standard Binary Distribution* is sufficient for our needs. Save it somewhere and extract it.
 	# Inside the just created Axis2 directory exists a *lib* directory. The content of this directory needs to be copied to 
 	the _R-Source/inst/java_ directory of the svn checkout. See the [CompileProject#Optimization Optimization] for some optimization.
