@@ -5,7 +5,7 @@ Depends: R (>= 2.9.0), rJava (>= 0.8), XML (>= 2.8)
 Imports: methods
 SystemRequirements: Java
 Author: Martin Schumann
-Maintainer: Martin Schumann <martin-schumann@gmx.net>
+Maintainer: Martin Schumann <Martin.Schumann.email@gmail.com>
 Description: This is an alpha release. Retrieve information from the
     ncbi web service.
 License: GPL-3

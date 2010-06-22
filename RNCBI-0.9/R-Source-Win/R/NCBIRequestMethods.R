@@ -22,6 +22,11 @@ setMethod("initialize", "NCBIRequest", function(.Object, ...) {
 #' @author Martin Schumann
 #' @export
 setMethod("setRequestParameter", "NCBIRequest", function(opObj, parameter, value) {
+			# values should never be NULL
+			# if the user wants to reset the request list, create a new object
+			if (is.null(value)) {
+				stop("Value not set.")
+			}
 			tryCatch({
 						if (parameter %in% names(opObj@request)) {
 							# set the specific request
