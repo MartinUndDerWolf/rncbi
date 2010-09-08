@@ -28,3 +28,9 @@ install.packages("XML")
 }}}
 Further informations can be found on this [http://cran.r-project.org/web/packages/XML/index.html site].
 
+== RNCBI == 
+The package itself can be installed from [http://cran.r-project.org/ CRAN] directly.
+To do this inside R type:
+{{{
+install.packages("RNCBI")
+}}}
