@@ -16,6 +16,6 @@ The R part will convert the requests and results to pass them to the java part.
 Interpretation of the results is the task of the user.}
 \alias{RNCBI}
 \docType{package}
-\author{Martin Schumann \email{Martin.Schumann.email@gmail.com}}
+\author{Martin Schumann \email{martin.schumann.email@gmail.com}}
 \references{https://code.google.com/p/rncbi/}
 \keyword{package}
