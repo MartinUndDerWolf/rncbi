@@ -1,6 +1,6 @@
 #Introduction
 With this package it is possible to access data from the NCBI Webservice inside R and use this data for further processing.
-The package provides the returned data in the form of a list object. This list can be inspected further, see the [Examples Examples] for more details.
+The package provides the returned data in the form of a list object. This list can be inspected further, see the [Examples](https://github.com/MartinUndDerWolf/rncbi/wiki/Examples) for more details.
 
 # Installation
 Installation of the package is quite easy as it doesn't need to compile anything.
